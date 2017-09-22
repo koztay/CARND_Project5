@@ -42,6 +42,7 @@ def convert_color(img, conv='RGB2YCrCb'):
     if conv == 'RGB2HLS':
         return cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
 
+
 # Define a function to return HOG features and visualization
 def get_hog_features(img, orient, pix_per_cell, cell_per_block,
                      vis=False, feature_vec=True):
@@ -245,6 +246,157 @@ def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
         cv2.rectangle(imcopy, bbox[0], bbox[1], color, thick)
     # Return the image copy with boxes drawn
     return imcopy
+
+
+def add_heat(heatmap, bbox_list):
+    # Iterate through list of bboxes
+    for box in bbox_list:
+        # Add += 1 for all pixels inside each bbox
+        # Assuming each "box" takes the form ((x1, y1), (x2, y2))
+        heatmap[box[0][1]:box[1][1], box[0][0]:box[1][0]] += 1
+
+    # Return updated heatmap
+    return heatmap  # Iterate through list of bboxes
+
+
+def apply_threshold(heatmap, threshold):
+    # Zero out pixels below the threshold
+    heatmap[heatmap <= threshold] = 0
+    # Return thresholded map
+    return heatmap
+
+
+def draw_labeled_bboxes(img, labels, min_rect_size):
+    # Iterate through all detected cars
+    for car_number in range(1, labels[1] + 1):
+        # Find pixels with each car_number label value
+        nonzero = (labels[0] == car_number).nonzero()
+        # Identify x and y values of those pixels
+        nonzeroy = np.array(nonzero[0])
+        nonzerox = np.array(nonzero[1])
+        # Define a bounding box based on min/max x and y
+        bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
+        # Draw the box on the image
+        bbox_rect_size = (bbox[1][0]-bbox[0][0]) * (bbox[1][1]-bbox[0][1])
+        print(bbox)
+        print(bbox[0])
+        print(bbox[1])
+        print("x:", (bbox[1][0]-bbox[0][0]))
+        print("y:", (bbox[1][1]-bbox[0][1]))
+        print(bbox_rect_size)
+        if bbox_rect_size > min_rect_size:
+            cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+        else:
+            print("bu box elendi...")
+    # Return the image
+    return img
+
+
+def draw_unlabeled_bboxes(img, box_list):
+    for bbox in box_list:
+        cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+    return img
+
+
+# Define a single function that can extract features using hog sub-sampling and make predictions
+def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
+              pix_per_cell, cell_per_block, cells_per_step, spatial_size, hist_bins):
+    draw_img = np.copy(img)
+    img = img.astype(np.float32) / 255
+
+    img_tosearch = img[ystart:ystop, :, :]
+    ctrans_tosearch = convert_color(img_tosearch, conv='RGB2HLS')
+    if scale != 1:
+        imshape = ctrans_tosearch.shape
+        # print("before", imshape)
+        # print(np.int(imshape[1] / scale))
+        # print(np.int(imshape[0] / scale))
+        ctrans_tosearch = cv2.resize(ctrans_tosearch, (np.int(imshape[1] / scale), np.int(imshape[0] / scale)))
+        # print("after", ctrans_tosearch.shape)
+
+    ch1 = ctrans_tosearch[:, :, 0]
+    ch2 = ctrans_tosearch[:, :, 1]
+    ch3 = ctrans_tosearch[:, :, 2]
+
+    # Define blocks and steps as above
+    nxblocks = (ch1.shape[1] // pix_per_cell) - cell_per_block + 1
+    nyblocks = (ch1.shape[0] // pix_per_cell) - cell_per_block + 1
+    nfeat_per_block = orient * cell_per_block ** 2
+    # print(nxblocks, nyblocks, nfeat_per_block)
+
+    # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
+    window = 64
+    nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
+    cells_per_step = cells_per_step  # Instead of overlap, define how many cells to step
+    nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
+    nysteps = (nyblocks - nblocks_per_window) // cells_per_step
+    # print(nblocks_per_window, nxsteps, nysteps)
+
+    # Compute individual channel HOG features for the entire image
+    hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
+    hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
+
+    box_list = []
+
+    for xb in range(nxsteps):
+        for yb in range(nysteps):
+            ypos = yb * cells_per_step
+            xpos = xb * cells_per_step
+            # Extract HOG for this patch
+            hog_feat1 = hog1[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
+            hog_feat2 = hog2[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
+            hog_feat3 = hog3[ypos:ypos + nblocks_per_window, xpos:xpos + nblocks_per_window].ravel()
+            hog_features = np.hstack((hog_feat1, hog_feat2, hog_feat3))
+
+            xleft = xpos * pix_per_cell
+            ytop = ypos * pix_per_cell
+
+            # Extract the image patch
+            subimg = cv2.resize(ctrans_tosearch[ytop:ytop + window, xleft:xleft + window], (64, 64))
+
+            # Get color features
+            spatial_features = bin_spatial(subimg, size=spatial_size)
+            hist_features = color_hist(subimg, nbins=hist_bins)
+
+            # Scale features and make a prediction
+            # print(spatial_features.shape, hist_features.shape, hog_features.shape)
+
+            test_features = X_scaler.transform(
+                np.hstack((spatial_features, hist_features, hog_features)).reshape(1, -1))
+            # test_features = X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))
+            test_prediction = svc.predict(test_features)
+
+            if test_prediction == 1:
+                xbox_left = np.int(xleft * scale)
+                ytop_draw = np.int(ytop * scale)
+                win_draw = np.int(window * scale)
+                top_left = (xbox_left, ytop_draw + ystart)
+                bottom_right = (xbox_left + win_draw, ytop_draw + win_draw + ystart)
+                # cv2.rectangle(draw_img, top_left, bottom_right, (0, 0, 255), 6)
+                # bunun yerine add_heat yapacağız.
+                # Add heat to each box in box list
+                # ((x1, y1), (x2, y2))
+                box_list.append((top_left, bottom_right))
+
+    return box_list
+
+""""
+[((800, 400), (900, 500)), 
+((850, 400), (950, 500)), 
+((1050, 400), (1150, 500)), 
+((1100, 400), (1200, 500)), 
+((1150, 400), (1250, 500)), 
+((875, 400), (925, 450)), 
+((1075, 400), (1125, 450)), 
+((825, 425), (875, 475)), 
+((814, 400), (889, 475)), 
+((851, 400), (926, 475)), 
+((1073, 400), (1148, 475)), 
+((1147, 437), (1222, 512)), 
+((1184, 437), (1259, 512)), 
+((400, 400), (500, 500))]
+"""
 
 
 if __name__ == '__main__':

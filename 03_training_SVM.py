@@ -68,7 +68,7 @@ print('Feature vector length:', len(X_train[0]))
 # Use a linear SVC
 # svc = LinearSVC()
 # parameters = {'kernel': ('linear', 'rbf'), 'C': [1, 3, 5, 7, 10]}
-svc = SVC()
+svc = LinearSVC()
 # svc = grid_search.GridSearchCV(svr, parameters)
 # clf.fit(X_train, y_train)
 
