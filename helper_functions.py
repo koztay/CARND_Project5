@@ -1,8 +1,10 @@
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
 import numpy as np
 import glob
 import cv2
 from skimage.feature import hog
+import time
 
 
 def all_images():
@@ -74,11 +76,11 @@ def bin_spatial(img, size=(32, 32)):
 
 # Define a function to compute color histogram features
 # NEED TO CHANGE bins_range if reading .png files with mpimg!
-def color_hist(img, nbins=32, bins_range=(0, 256)):
+def color_hist(img, nbins=32):
     # Compute the histogram of the color channels separately
-    channel1_hist = np.histogram(img[:, :, 0], bins=nbins, range=bins_range)
-    channel2_hist = np.histogram(img[:, :, 1], bins=nbins, range=bins_range)
-    channel3_hist = np.histogram(img[:, :, 2], bins=nbins, range=bins_range)
+    channel1_hist = np.histogram(img[:, :, 0], bins=nbins)
+    channel2_hist = np.histogram(img[:, :, 1], bins=nbins)
+    channel3_hist = np.histogram(img[:, :, 2], bins=nbins)
     # Concatenate the histograms into a single feature vector
     hist_features = np.concatenate((channel1_hist[0], channel2_hist[0], channel3_hist[0]))
     # Return the individual histograms, bin_centers and feature vector
@@ -236,6 +238,38 @@ def slide_window(img, x_start_stop=[None, None], y_start_stop=[None, None],
     return window_list
 
 
+# Define a function you will pass an image
+# and the list of windows to be searched (output of slide_windows())
+def search_windows(img, windows, clf, scaler, color_space='RGB',
+                   spatial_size=(32, 32), hist_bins=32,
+                   hist_range=(0, 256), orient=9,
+                   pix_per_cell=8, cell_per_block=2,
+                   hog_channel=0, spatial_feat=True,
+                   hist_feat=True, hog_feat=True):
+    # 1) Create an empty list to receive positive detection windows
+    on_windows = []
+    # 2) Iterate over all windows in the list
+    for window in windows:
+        # 3) Extract the test window from original image
+        test_img = cv2.resize(img[window[0][1]:window[1][1], window[0][0]:window[1][0]], (64, 64))
+        # 4) Extract features for that window using single_img_features()
+        features = single_img_features(test_img, color_space=color_space,
+                                       spatial_size=spatial_size, hist_bins=hist_bins,
+                                       orient=orient, pix_per_cell=pix_per_cell,
+                                       cell_per_block=cell_per_block,
+                                       hog_channel=hog_channel, spatial_feat=spatial_feat,
+                                       hist_feat=hist_feat, hog_feat=hog_feat)
+        # 5) Scale extracted features to be fed to classifier
+        test_features = scaler.transform(np.array(features).reshape(1, -1))
+        # 6) Predict using your classifier
+        prediction = clf.predict(test_features)
+        # 7) If positive (prediction == 1) then save the window
+        if prediction == 1:
+            on_windows.append(window)
+    # 8) Return windows for positive detections
+    return on_windows
+
+
 # Define a function to draw bounding boxes
 def draw_boxes(img, bboxes, color=(0, 0, 255), thick=6):
     # Make a copy of the image
@@ -259,14 +293,14 @@ def add_heat(heatmap, bbox_list):
     return heatmap  # Iterate through list of bboxes
 
 
-def apply_threshold(heatmap, threshold):
+def apply_threshold(heatmap, threshold=3):
     # Zero out pixels below the threshold
     heatmap[heatmap <= threshold] = 0
     # Return thresholded map
     return heatmap
 
 
-def draw_labeled_bboxes(img, labels, min_rect_size):
+def draw_labeled_bboxes(img, labels, min_rect_size=2500, max_aspect_ratio=1):
     # Iterate through all detected cars
     for car_number in range(1, labels[1] + 1):
         # Find pixels with each car_number label value
@@ -278,16 +312,23 @@ def draw_labeled_bboxes(img, labels, min_rect_size):
         bbox = ((np.min(nonzerox), np.min(nonzeroy)), (np.max(nonzerox), np.max(nonzeroy)))
         # Draw the box on the image
         bbox_rect_size = (bbox[1][0]-bbox[0][0]) * (bbox[1][1]-bbox[0][1])
-        print(bbox)
-        print(bbox[0])
-        print(bbox[1])
-        print("x:", (bbox[1][0]-bbox[0][0]))
-        print("y:", (bbox[1][1]-bbox[0][1]))
-        print(bbox_rect_size)
-        if bbox_rect_size > min_rect_size:
-            cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
-        else:
-            print("bu box elendi...")
+        bbox_aspect_ratio = (bbox[1][0]-bbox[0][0]) / (bbox[1][1]-bbox[0][1])
+        # print("aspect_ratio :", bbox_aspect_ratio)
+        cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+
+        # print(bbox[0])
+        # print(bbox[1])
+        # print("x:", (bbox[1][0]-bbox[0][0]))
+        # print("y:", (bbox[1][1]-bbox[0][1]))
+        # print(bbox_rect_size)
+        # if (bbox_rect_size > min_rect_size) and (bbox_aspect_ratio < max_aspect_ratio):
+        #     cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+        # else:
+        #     if bbox_rect_size < min_rect_size:
+        #         print("bbox_rect_size küçük bu box elendi...")
+        #     if bbox_aspect_ratio > max_aspect_ratio:
+        #         print("bbox_aspect_ratio büyük bu box elendi...")
+
     # Return the image
     return img
 
@@ -301,11 +342,15 @@ def draw_unlabeled_bboxes(img, box_list):
 # Define a single function that can extract features using hog sub-sampling and make predictions
 def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
               pix_per_cell, cell_per_block, cells_per_step, spatial_size, hist_bins):
+    img_boxes = []
+    t = time.time()
+    count = 0
     draw_img = np.copy(img)
+    heatmap = np.zeros_like(img[:, :, 0])
     img = img.astype(np.float32) / 255
 
     img_tosearch = img[ystart:ystop, :, :]
-    ctrans_tosearch = convert_color(img_tosearch, conv='RGB2HLS')
+    ctrans_tosearch = convert_color(img_tosearch, conv='RGB2YCrCb')
     if scale != 1:
         imshape = ctrans_tosearch.shape
         # print("before", imshape)
@@ -336,8 +381,6 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
     hog1 = get_hog_features(ch1, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog2 = get_hog_features(ch2, orient, pix_per_cell, cell_per_block, feature_vec=False)
     hog3 = get_hog_features(ch3, orient, pix_per_cell, cell_per_block, feature_vec=False)
-
-    box_list = []
 
     for xb in range(nxsteps):
         for yb in range(nysteps):
@@ -373,13 +416,25 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
                 win_draw = np.int(window * scale)
                 top_left = (xbox_left, ytop_draw + ystart)
                 bottom_right = (xbox_left + win_draw, ytop_draw + win_draw + ystart)
-                # cv2.rectangle(draw_img, top_left, bottom_right, (0, 0, 255), 6)
-                # bunun yerine add_heat yapacağız.
-                # Add heat to each box in box list
-                # ((x1, y1), (x2, y2))
-                box_list.append((top_left, bottom_right))
+                cv2.rectangle(draw_img, top_left, bottom_right, (0, 0, 255), 6)
+                img_boxes.append((top_left, bottom_right))
+                heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 1
 
-    return box_list
+    return draw_img, heatmap
+
+
+def visualize(fig, rows, cols, imgs, title):
+    for i, img in enumerate(imgs):
+        plt.subplot(rows, cols, i+1)
+        plt.title(i+1)
+        img_dims = len(img.shape)
+        if img_dims < 3:
+            plt.imshow(img, cmap='hot')
+        else:
+            plt.imshow(img)
+    fig.savefig("output_images/{}.png".format(title))
+
+
 
 """"
 [((800, 400), (900, 500)), 

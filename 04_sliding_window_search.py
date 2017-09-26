@@ -14,22 +14,19 @@ X_scaler = dist_pickle["scaler"]
 orient = dist_pickle["orient"]
 pix_per_cell = dist_pickle["pix_per_cell"]
 cell_per_block = dist_pickle["cell_per_block"]
-# # spatial_size = dist_pickle["spatial_size"]
-# # hist_bins = dist_pickle["hist_bins"]
-# # color_space = dist_pickle["color_space"]
-# # print(color_space)
 spatial_size = (32, 32)
 hist_bins = 32
 
-img = mpimg.imread('test_images/test3.jpg')
-images = glob.iglob('test_images/*.jpg')
-
+# img = mpimg.imread('test_images/test3.jpg')
+images = glob.iglob('test_jpegs/*.jpg')
+print(images)
 
 ystart = 400
 ystop = 656
-scales = [1.2, 1.4, 1.7, 2.0, 2.3, 2.7]
-cells_per_step = 3
+scales = [1.2, 1.4, 1.6, 1.8, 2.0]
+cells_per_step = 2
 min_rect_size = 80*80
+max_aspect_ratio = 21/9
 
 
 def heat_filter_for_detected_cars(img):
@@ -53,13 +50,15 @@ def heat_filter_for_detected_cars(img):
     # Add heat to each box in box list
     heat = hf.add_heat(heat, box_list)
     # Apply threshold to help remove false positives
-    heat = hf.apply_threshold(heat, 5)
+    heat = hf.apply_threshold(heat, 3)
     # Visualize the heatmap when displaying
     heatmap = np.clip(heat, 0, 255)
     # Find final boxes from heatmap using label function
     labels = label(heatmap)
     # print(labels)
-    detected_cars_img = hf.draw_labeled_bboxes(np.copy(img), labels, min_rect_size=min_rect_size)
+    detected_cars_img = hf.draw_labeled_bboxes(np.copy(img), labels,
+                                               min_rect_size=min_rect_size,
+                                               max_aspect_ratio=max_aspect_ratio)
     draw_img = hf.draw_unlabeled_bboxes(np.copy(img), box_list)
     return detected_cars_img, draw_img, heatmap
 
@@ -68,6 +67,7 @@ plottables = []
 for index, image_path in enumerate(images):
     t = time.time()
     img = mpimg.imread(image_path)
+    print(image_path)
     detected_cars_img, draw_img, heatmap = heat_filter_for_detected_cars(img)
     plottables.append([detected_cars_img, draw_img, heatmap])
     mpimg.imsave("output_images/detected_cars_img_{}.jpg".format(index), detected_cars_img)
