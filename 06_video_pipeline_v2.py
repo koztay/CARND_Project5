@@ -101,7 +101,7 @@ def draw_labeled_bboxes(img, labels, carslist):
                         car.status = car.status[-KEEP_LAST_STATUS:]
                         if not car.is_new:  # if car is not new draw rectangle
                             # if intersect exist than add it to the list
-                            if x_intersect_ratio > 0.7 and y_intersect_ratio > 0.7:
+                            if x_intersect_ratio > 0.3 and y_intersect_ratio > 0.3:
                                 car.xpixels = nonzerox
                                 car.ypixels = nonzeroy
 
