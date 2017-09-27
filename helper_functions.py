@@ -423,16 +423,20 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
     return draw_img, heatmap
 
 
-def visualize(fig, rows, cols, imgs, title):
+def visualize(fig, rows, cols, imgs, title, save=False):
     for i, img in enumerate(imgs):
         plt.subplot(rows, cols, i+1)
-        plt.title(i+1)
+        if len(title) > 1:
+            plt.title(title[i])
+        else:
+            plt.title(i+1)
         img_dims = len(img.shape)
         if img_dims < 3:
             plt.imshow(img, cmap='hot')
         else:
             plt.imshow(img)
-    fig.savefig("output_images/{}.png".format(title))
+    if save:
+        fig.savefig("output_images/{}.png".format(title))
 
 
 

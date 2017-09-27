@@ -28,7 +28,6 @@ def data_look(car_list, notcar_list):
 
 cars = hf.vehicle_images()
 notcars = hf.non_vehicle_images()
-
 data_info = data_look(cars, notcars)
 
 print('Your function returned a count of',
@@ -44,28 +43,32 @@ notcar_ind = np.random.randint(0, len(notcars))
 car_image = mpimg.imread(cars[car_ind])
 notcar_image = mpimg.imread(notcars[notcar_ind])
 
+images = [car_image, notcar_image]
+titles = ["Random Car Image", "Random Not Car Image"]
 # Plot the examples
-fig = plt.figure()
-plt.subplot(121)
-plt.imshow(car_image)
-plt.title('Example Car Image')
-plt.subplot(122)
-plt.imshow(notcar_image)
-plt.title('Example Not-car Image')
+fig = plt.figure(figsize=(10, 5))
+hf.visualize(fig, 1, 2, images, titles)
 plt.show()
 fig.savefig("output_images/00_car_notcar.png")
 
 
-# Generate a random index to look at a car image
-ind = np.random.randint(0, len(cars))
-# Read in the image
-image = mpimg.imread(cars[ind])
+car_ind = np.random.randint(0, len(cars))
+notcar_ind = np.random.randint(0, len(notcars))
+
+# Read in car / not-car images
+car_image = mpimg.imread(cars[car_ind])
+notcar_image = mpimg.imread(notcars[notcar_ind])
 
 # gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-hls = cv2.cvtColor(image, cv2.COLOR_RGB2YCrCb)
-channel_1 = hls[:, :, 0]
-channel_2 = hls[:, :, 1]
-channel_3 = hls[:, :, 2]
+ycrcb_car = cv2.cvtColor(car_image, cv2.COLOR_RGB2YCrCb)
+car_channel_1 = ycrcb_car[:, :, 0]
+car_channel_2 = ycrcb_car[:, :, 1]
+car_channel_3 = ycrcb_car[:, :, 2]
+
+ycrcb_not_car = cv2.cvtColor(notcar_image, cv2.COLOR_RGB2YCrCb)
+not_car_channel_1 = ycrcb_not_car[:, :, 0]
+not_car_channel_2 = ycrcb_not_car[:, :, 1]
+not_car_hannel_3 = ycrcb_not_car[:, :, 2]
 
 # Define HOG parameters
 orient = 9
@@ -73,27 +76,35 @@ pix_per_cell = 8
 cell_per_block = 2
 
 # Call our function with vis=True to see an image output
-features, hog_image = hf.get_hog_features(channel_3, orient,
-                                          pix_per_cell, cell_per_block,
-                                          vis=True, feature_vec=True)
+features_car, hog_image_car = hf.get_hog_features(car_channel_1, orient,
+                                                  pix_per_cell, cell_per_block,
+                                                  vis=True, feature_vec=True)
+
+features_not_car, hog_image_not_car = hf.get_hog_features(not_car_channel_1, orient,
+                                                          pix_per_cell, cell_per_block,
+                                                          vis=True, feature_vec=True)
+print(hog_image_car.shape)
+print(features_car.shape)
+
+img0 = car_image
+img1 = hog_image_car
+img2 = car_channel_1
+img3 = car_channel_2
+img4 = car_channel_3
+img5 = notcar_image
+img6 = hog_image_not_car
+img7 = not_car_channel_1
+img8 = not_car_channel_2
+img9 = not_car_hannel_3
 
 
-print(hog_image.shape)
-print(features.shape)
+images = [img0, img1, img2, img3, img4, img5, img6, img7, img8, img9]
+titles = ["Image", "Hog Image", "Y Channel", "Cr Channel", "Cb Channel",
+          "Not Car Image", "Hog Image", "Y Channel", "Cr Channel", "Cb Channel"]
 
-# Plot the examples
-fig = plt.figure()
-plt.subplot(331)
-plt.imshow(channel_1, cmap='gray')
-plt.title('Example Car Image')
-plt.subplot(332)
-plt.imshow(channel_2, cmap='gray')
-plt.title('HOG Visualization')
-plt.subplot(333)
-plt.imshow(channel_3, cmap='gray')
-plt.title('Channel2 Visualization')
-
-
+fig = plt.figure(figsize=(10, 4))
+hf.visualize(fig, 2, 5, images, titles)
 plt.show()
+
 fig.savefig("output_images/01_hog_visualization.png")
 

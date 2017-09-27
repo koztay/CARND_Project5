@@ -3,79 +3,53 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 import numpy as np
 import pickle
-from scipy.ndimage.measurements import label
 import time
 import helper_functions as hf
 
+test_images = glob.glob("test_images/*.jpg")
+images = []
+titles = []
+y_start_stop = [None, None]
+overlap = 0.75
 
 dist_pickle = pickle.load(open("svc_pickle.p", "rb"))
 svc = dist_pickle["svc"]
 X_scaler = dist_pickle["scaler"]
 orient = dist_pickle["orient"]
 pix_per_cell = dist_pickle["pix_per_cell"]
+print("pix_per_cell :", pix_per_cell)
 cell_per_block = dist_pickle["cell_per_block"]
+print("cell_per_block:", cell_per_block)
+color_space = "YCrCb"
 spatial_size = (32, 32)
 hist_bins = 32
+hog_channel = "ALL"
+spatial_feat = True
+hist_feat = True
+hog_feat = True
 
-# img = mpimg.imread('test_images/test3.jpg')
-images = glob.iglob('test_jpegs/*.jpg')
-print(images)
+for img_path in test_images:
+    t1 = time.time()
+    img = mpimg.imread(img_path)
+    draw_img = np.copy(img)
+    img = img.astype(np.float32)/255  # normalize img (we trained with pngs, and now reading jpgs.
+    print(np.min(img), np.max(img))  # make sure that image is normalized
 
-ystart = 400
-ystop = 656
-scales = [1.2, 1.4, 1.6, 1.8, 2.0]
-cells_per_step = 2
-min_rect_size = 80*80
-max_aspect_ratio = 21/9
+    windows = hf.slide_window(img, x_start_stop=[None, None], y_start_stop=y_start_stop,
+                              xy_window=(64, 64), xy_overlap=(overlap, overlap))
 
+    hot_windows = hf.search_windows(img, windows, svc, X_scaler, color_space=color_space,
+                                    spatial_size=spatial_size, hist_bins=hist_bins,
+                                    orient=orient, pix_per_cell=pix_per_cell,
+                                    cell_per_block=cell_per_block, hog_channel=hog_channel,
+                                    spatial_feat=spatial_feat, hist_feat=hist_feat, hog_feat=hog_feat)
 
-def heat_filter_for_detected_cars(img):
-    box_list = []
-    for scale in scales:
-        box_list_loop = hf.find_cars(img,
-                                     ystart,
-                                     ystop,
-                                     scale,
-                                     svc,
-                                     X_scaler,
-                                     orient,
-                                     pix_per_cell,
-                                     cell_per_block,
-                                     cells_per_step,
-                                     spatial_size,
-                                     hist_bins)
+    window_img = hf.draw_boxes(draw_img, hot_windows, color=(0, 255), thick=6)
+    images.append(window_img)
+    titles.append("")
+    print(time.time() - t1, "seconds to process single image search", len(windows), "windows")
 
-        box_list.extend(box_list_loop)
-    heat = np.zeros_like(img[:, :, 0]).astype(np.float)
-    # Add heat to each box in box list
-    heat = hf.add_heat(heat, box_list)
-    # Apply threshold to help remove false positives
-    heat = hf.apply_threshold(heat, 3)
-    # Visualize the heatmap when displaying
-    heatmap = np.clip(heat, 0, 255)
-    # Find final boxes from heatmap using label function
-    labels = label(heatmap)
-    # print(labels)
-    detected_cars_img = hf.draw_labeled_bboxes(np.copy(img), labels,
-                                               min_rect_size=min_rect_size,
-                                               max_aspect_ratio=max_aspect_ratio)
-    draw_img = hf.draw_unlabeled_bboxes(np.copy(img), box_list)
-    return detected_cars_img, draw_img, heatmap
-
-
-plottables = []
-for index, image_path in enumerate(images):
-    t = time.time()
-    img = mpimg.imread(image_path)
-    print(image_path)
-    detected_cars_img, draw_img, heatmap = heat_filter_for_detected_cars(img)
-    plottables.append([detected_cars_img, draw_img, heatmap])
-    mpimg.imsave("output_images/detected_cars_img_{}.jpg".format(index), detected_cars_img)
-    mpimg.imsave("output_images/draw_img_{}.jpg".format(index), draw_img)
-    mpimg.imsave("output_images/heatmap_{}.jpg".format(index), heatmap)
-    t2 = time.time()
-    print(round(t2 - t, 2), 'Seconds to work on an image...')
-
-
-
-
+fig = plt.figure(figsize=(12, 12))
+hf.visualize(fig, 3, 2, images, titles)
+plt.show()
+fig.savefig("output_images/04_sliding_window_search_0_75_64by64.png")

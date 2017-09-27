@@ -16,12 +16,12 @@ X_scaler = dist_pickle["scaler"]
 orient = dist_pickle["orient"]
 pix_per_cell = dist_pickle["pix_per_cell"]
 cell_per_block = dist_pickle["cell_per_block"]
-cells_per_step = 2
+cells_per_step = 2  # this means 75% overlap
 spatial_size = (32, 32)
 hist_bins = 32
 ystart = 400
 ystop = 656
-scale = 1.5
+scale = 1.0
 
 for img_path in test_images:
     img = mpimg.imread(img_path)
@@ -35,6 +35,7 @@ for img_path in test_images:
     out_titles.append("")
     out_images.append(heat_map)
 
-fig = plt.figure(figsize=(12, 24))
-hf.visualize(fig, 8, 2, out_images, "image_pipeline")
-
+fig = plt.figure(figsize=(12, 18))
+hf.visualize(fig, 6, 2, out_images, title="")
+plt.show()
+fig.savefig("output_images/05_images_pipeline.png")
