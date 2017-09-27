@@ -245,7 +245,7 @@ def process_image(img):
     return draw_img
 
 
-filename = "project_video.mp4"
+filename = "self_video.mp4"
 
 # clip1 = VideoFileClip(filename).subclip(15, 25)
 clip1 = VideoFileClip(filename)
