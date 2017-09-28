@@ -1,5 +1,6 @@
 import helper_functions as hf
 import cv2
+import matplotlib.image as mpimg
 import numpy as np
 import pickle
 from scipy.ndimage.measurements import label
@@ -191,22 +192,6 @@ def draw_labeled_bboxes(img, labels, carslist):
                 cv2.putText(img, "num detected cars : {}".format(labels[1]),
                             (10, 90), cv2.FONT_HERSHEY_PLAIN, 2, (255, 255, 255), 1)
 
-    # remove cars if detected all False in status array
-    # for car in carslist:
-    #     if len(set(car.status)) == 1 and len(car.status) >= 15:
-    #         if not car.status[0]:
-    #             print(car.status)
-    #             carslist.remove(car)
-    #             print("car removed because last 10 detection is false")
-    #
-    # # remove cars if has more than detected
-    # if len(carslist) > labels[1]:
-    #     difference = len(carslist)-labels[1]
-    #     cars_to_be_deleted = carslist[-difference:]
-    #     for car in cars_to_be_deleted:
-    #         carslist.remove(car)
-    #         print("car removed because there are more cars than detected.")
-
     for car in carslist:  # bunu silersen diğerleri çalışmıyor...
         if len(car.status) >= 10:
             car.is_new = False
@@ -230,7 +215,6 @@ def process_image(img):
     labels = label(average_heat_map)
     label_list.append(labels)
 
-    # this does not work properly
     number_of_detected_cars = labels[1]
     number_of_missing_vehicles = number_of_detected_cars - len(carslist)
     # print(number_of_missing_vehicles)
@@ -245,9 +229,9 @@ def process_image(img):
     return draw_img
 
 
-filename = "project_video.mp4"
+filename = "self_video.mp4"
 
-# clip1 = VideoFileClip(filename).subclip(35, 45)
+# clip1 = VideoFileClip(filename).subclip(44, 45)
 clip1 = VideoFileClip(filename)
 clip2 = clip1.fl_image(process_image)
 clip2.write_videofile("output_video/{}".format(filename), audio=False)

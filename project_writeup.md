@@ -200,21 +200,26 @@ Here's a [link to my video result](./project_video.mp4)
 
 ####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
 
-I recorded the positions of positive detections in each frame of the video.  From the positive detections I created a heatmap and then thresholded that map to identify vehicle positions.  I then used `scipy.ndimage.measurements.label()` to identify individual blobs in the heatmap.  I then assumed each blob corresponded to a vehicle.  I constructed bounding boxes to cover the area of each blob detected.  
+For video pipeline I have created another file named `06_video_pipeline.py`. 
+And first I decided to work on false positives. In order to remove false positivies I have summed the heatmaps over several frames and after that applied threshold and averaged them. `lines between 225-232`. After that I applied `scipy.ndimage.measurements.label()` function in order to identify individual blobs in the heatmap. 
+(I already plotted the heatmaps at the previous section so, I will not plot the heaptmaps again.)
 
-Here's an example result showing the heatmap from a series of frames of video, the result of `scipy.ndimage.measurements.label()` and the bounding boxes then overlaid on the last frame of video:
+By doing that most of the false positives were removed but I could not succeed to get rid of all the false positives. Because if I increase the threshold then I get smaller sized bounding boxes around cars and in some areas I got several windows on the same cars especially on big ones. In order to get rid of this I will add the following lines to my `find_cars()` function `between the lines 424-430`:
 
-### Here are six frames and their corresponding heatmaps:
+```python
+if len(img_boxes) > 0:
+    for box in img_boxes:
+        top_left, bottom_right = box
+        if np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]) > 1:
+            heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 2
 
-![alt text][image555]
+```
 
-### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image555]
+The above lines adds 2 more heatmap if there is more than 1 window detected so, it makes easily to remove the False positives remaining. After adding the above lines, I achived a video wihout any False positives.
 
-### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image555]
+But there was one last problem and it was wobbly boxes problem. In order to solve this problem I created a Vehicle class `between the lines of 29-51` in order to keep the status of cars and detections. But I also needed to modify `draw_labeled_bboxes()` function an when it becomes a huge function I removed it form my helper_functions.py and put it into the `06_video_pipeline.py  (lines between 53 and 200)`.
 
-
+Finally I achieved a smooth moving bounding boxes and no any False positive detections.
 
 ---
 

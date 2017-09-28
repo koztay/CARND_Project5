@@ -426,24 +426,7 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
         for box in img_boxes:
             top_left, bottom_right = box
             if np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]) > 1:
-                # print("ekleme yapıldı.")
                 heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 2
-
-    # for x, xb in enumerate(range(nxsteps)):
-    #     for y, yb in enumerate(range(nysteps)):
-    #         ypos = yb * cells_per_step
-    #         xpos = xb * cells_per_step
-    #         xleft = xpos * pix_per_cell
-    #         ytop = ypos * pix_per_cell
-    #         xbox_left = np.int(xleft * scale)
-    #         ytop_draw = np.int(ytop * scale)
-    #         win_draw = np.int(window * scale)
-    #         top_left = (xbox_left, ytop_draw + ystart)
-    #         bottom_right = (xbox_left + win_draw, ytop_draw + win_draw + ystart)
-    #         if np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]) > 2:
-    #             print(np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]))
-    #             print("eklendi", x, y)
-    #             heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 2
 
     return draw_img, heatmap
 
