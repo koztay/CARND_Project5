@@ -300,7 +300,7 @@ def apply_threshold(heatmap, threshold=3):
     return heatmap
 
 
-def draw_labeled_bboxes(img, labels, min_rect_size=2500, max_aspect_ratio=1):
+def draw_labeled_bboxes(img, labels, min_rect_size=2500, min_aspect_ratio=0.6, max_aspect_ratio=2):
     # Iterate through all detected cars
     for car_number in range(1, labels[1] + 1):
         # Find pixels with each car_number label value
@@ -313,23 +313,27 @@ def draw_labeled_bboxes(img, labels, min_rect_size=2500, max_aspect_ratio=1):
         # Draw the box on the image
         bbox_rect_size = (bbox[1][0]-bbox[0][0]) * (bbox[1][1]-bbox[0][1])
         bbox_aspect_ratio = (bbox[1][0]-bbox[0][0]) / (bbox[1][1]-bbox[0][1])
-        # print("aspect_ratio :", bbox_aspect_ratio)
-        cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+
+        # cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
 
         # print(bbox[0])
         # print(bbox[1])
         # print("x:", (bbox[1][0]-bbox[0][0]))
         # print("y:", (bbox[1][1]-bbox[0][1]))
         # print(bbox_rect_size)
-        # if (bbox_rect_size > min_rect_size) and (bbox_aspect_ratio < max_aspect_ratio):
-        #     cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
-        # else:
-        #     if bbox_rect_size < min_rect_size:
-        #         print("bbox_rect_size küçük bu box elendi...")
-        #     if bbox_aspect_ratio > max_aspect_ratio:
-        #         print("bbox_aspect_ratio büyük bu box elendi...")
+        if (bbox_rect_size > min_rect_size) and (bbox_aspect_ratio > min_aspect_ratio) and (bbox_aspect_ratio < max_aspect_ratio):
+            cv2.rectangle(img, bbox[0], bbox[1], (0, 0, 255), 6)
+        else:
+            if bbox_rect_size < min_rect_size:
+                print("bbox_rect_size küçük bu box elendi...")
+                print("bbox_rect_size :", bbox_rect_size)
+            if bbox_aspect_ratio < min_aspect_ratio:
+                print("bbox_aspect_ratio küçük bu box elendi...")
+                print("aspect_ratio :", bbox_aspect_ratio)
+            if bbox_aspect_ratio > max_aspect_ratio:
+                print("bbox_aspect_ratio büyük bu box elendi...")
+                print("aspect_ratio :", bbox_aspect_ratio)
 
-    # Return the image
     return img
 
 
@@ -343,8 +347,6 @@ def draw_unlabeled_bboxes(img, box_list):
 def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
               pix_per_cell, cell_per_block, cells_per_step, spatial_size, hist_bins):
     img_boxes = []
-    t = time.time()
-    count = 0
     draw_img = np.copy(img)
     heatmap = np.zeros_like(img[:, :, 0])
     img = img.astype(np.float32) / 255
@@ -419,6 +421,29 @@ def find_cars(img, ystart, ystop, scale, svc, X_scaler, orient,
                 cv2.rectangle(draw_img, top_left, bottom_right, (0, 0, 255), 6)
                 img_boxes.append((top_left, bottom_right))
                 heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 1
+
+    if len(img_boxes) > 0:
+        for box in img_boxes:
+            top_left, bottom_right = box
+            if np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]) > 1:
+                # print("ekleme yapıldı.")
+                heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 2
+
+    # for x, xb in enumerate(range(nxsteps)):
+    #     for y, yb in enumerate(range(nysteps)):
+    #         ypos = yb * cells_per_step
+    #         xpos = xb * cells_per_step
+    #         xleft = xpos * pix_per_cell
+    #         ytop = ypos * pix_per_cell
+    #         xbox_left = np.int(xleft * scale)
+    #         ytop_draw = np.int(ytop * scale)
+    #         win_draw = np.int(window * scale)
+    #         top_left = (xbox_left, ytop_draw + ystart)
+    #         bottom_right = (xbox_left + win_draw, ytop_draw + win_draw + ystart)
+    #         if np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]) > 2:
+    #             print(np.max(heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]]))
+    #             print("eklendi", x, y)
+    #             heatmap[top_left[1]:bottom_right[1], top_left[0]:bottom_right[0]] += 2
 
     return draw_img, heatmap
 

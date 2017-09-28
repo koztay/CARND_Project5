@@ -13,16 +13,18 @@ The goals / steps of this project are the following:
 * Estimate a bounding box for vehicles detected.
 
 [//]: # (Image References)
-[image1]: ./examples/car_not_car.png
-[image2]: ./examples/HOG_example.jpg
-[image3]: ./examples/sliding_windows.jpg
-[image4]: ./examples/sliding_window.jpg
-[image5]: ./examples/bboxes_and_heat.png
-[image6]: ./examples/labels_map.png
-[image7]: ./examples/output_bboxes.png
-[video1]: ./project_video.mp4
+
+[video1]: ./output_video/project_video.mp4
 [image1]: ./output_images/00_car_notcar.png
 [image2]: ./output_images/01_HOG_visualization.png
+[image3]: ./output_images/04_sliding_window_search_0_50.png
+[image4]: ./output_images/04_sliding_window_search_0_75.png
+[image5]: ./output_images/04_sliding_window_search_0_50_64by64.png
+[image6]: ./output_images/04_sliding_window_search_0_75_64by64.png
+[image7]: ./output_images/04_sliding_window_search_0_75_96by96.png
+[image8]: ./output_images/05_images_pipeline_128by128.png
+[image9]: ./output_images/05_images_pipeline_64by64.png
+[image10]: ./output_images/05_images_pipeline_combined_scales.png
 
 ## [Rubric](https://review.udacity.com/#!/rubrics/513/view) Points
 ###Here I will consider the rubric points individually and describe how I addressed each point in my implementation.  
@@ -155,15 +157,39 @@ Test Accuracy of SVC =  0.9913
 
 ####1. Describe how (and identify where in your code) you implemented a sliding window search.  How did you decide what scales to search and how much to overlap windows?
 
-I decided to search random window positions at random scales all over the image and came up with this (ok just kidding I didn't actually ;):
+I created a file named `04_sliding_window_search.py` in order to define the parameters for what scales to search and how much overlapping windows. Here below the results of several parameter trials:
 
+**0.50 Overlap / 128x128 px window size :** 
 ![alt text][image3]
+
+**0.75 Overlap / 128x128 px window size :** 
+![alt text][image4]
+
+**0.50 Overlap / 64x64 px window size :** 
+![alt text][image5]
+
+**0.75 Overlap / 64x64 px window size :** 
+![alt text][image6]
+
+The best results were achieved by 0.75 overlap with 128x128 pixels window size.
+
 
 ####2. Show some examples of test images to demonstrate how your pipeline is working.  What did you do to optimize the performance of your classifier?
 
-Ultimately I searched on two scales using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are some example images:
+Not: From now on I used the `find_cars()` function from the lessons with my file `05_images_pipeline.py`. 
+Ultimately I searched on two scales `(scale=1 which means 64x64 and scale=2 which means 128x128)` using YCrCb 3-channel HOG features plus spatially binned color and histograms of color in the feature vector, which provided a nice result.  Here are the results of example images with each scales:
 
-![alt text][image4]
+**0.75 Overlap / 128x128 px window size :** 
+![alt text][image8]
+
+**0.75 Overlap / 64x64 px window size :** 
+![alt text][image9]
+
+In order to optimize performance of my classifier I collected heatmaps for each scale and applied threshold for the collected heatmaps. Here the result of combined thresholds for each scales:
+
+**0.75 Overlap / Combined Scales :**
+![alt text][image10]
+
 ---
 
 ### Video Implementation
@@ -180,13 +206,13 @@ Here's an example result showing the heatmap from a series of frames of video, t
 
 ### Here are six frames and their corresponding heatmaps:
 
-![alt text][image5]
+![alt text][image555]
 
 ### Here is the output of `scipy.ndimage.measurements.label()` on the integrated heatmap from all six frames:
-![alt text][image6]
+![alt text][image555]
 
 ### Here the resulting bounding boxes are drawn onto the last frame in the series:
-![alt text][image7]
+![alt text][image555]
 
 
 

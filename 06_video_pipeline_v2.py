@@ -224,8 +224,8 @@ def process_image(img):
 
     # Add  heats to the list and calculate average od them
     heatmaps_collection.append(heat_map)
-    sum_of_heatmaps = sum(heatmaps_collection[-5:])  # sum of last X
-    heat_map = hf.apply_threshold(sum_of_heatmaps, threshold=5)  # thresholded heat_maps
+    sum_of_heatmaps = sum(heatmaps_collection[-10:])  # sum of last X
+    heat_map = hf.apply_threshold(sum_of_heatmaps, threshold=25)  # thresholded heat_maps
     average_heat_map = heat_map / len(heatmaps_collection)  # averaged heatmap of thresholded maps
     labels = label(average_heat_map)
     label_list.append(labels)
@@ -245,12 +245,12 @@ def process_image(img):
     return draw_img
 
 
-filename = "self_video.mp4"
+filename = "project_video.mp4"
 
-# clip1 = VideoFileClip(filename).subclip(15, 25)
+# clip1 = VideoFileClip(filename).subclip(35, 45)
 clip1 = VideoFileClip(filename)
 clip2 = clip1.fl_image(process_image)
-clip2.write_videofile("output_video/{}".format(filename), audio=False)
+clip2.write_videofile("output_video/v2_{}".format(filename), audio=False)
 
 
 

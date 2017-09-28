@@ -36,7 +36,7 @@ for img_path in test_images:
     print(np.min(img), np.max(img))  # make sure that image is normalized
 
     windows = hf.slide_window(img, x_start_stop=[None, None], y_start_stop=y_start_stop,
-                              xy_window=(64, 64), xy_overlap=(overlap, overlap))
+                              xy_window=(96, 96), xy_overlap=(overlap, overlap))
 
     hot_windows = hf.search_windows(img, windows, svc, X_scaler, color_space=color_space,
                                     spatial_size=spatial_size, hist_bins=hist_bins,
@@ -52,4 +52,4 @@ for img_path in test_images:
 fig = plt.figure(figsize=(12, 12))
 hf.visualize(fig, 3, 2, images, titles)
 plt.show()
-fig.savefig("output_images/04_sliding_window_search_0_75_64by64.png")
+fig.savefig("output_images/04_sliding_window_search_0_75_96by96.png")
