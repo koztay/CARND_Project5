@@ -15,6 +15,7 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [video1]: ./output_video/project_video.mp4
+[video2]: ./output_video/self_video.mp4
 [image1]: ./output_images/00_car_notcar.png
 [image2]: ./output_images/01_HOG_visualization.png
 [image3]: ./output_images/04_sliding_window_search_0_50.png
@@ -195,7 +196,7 @@ In order to optimize performance of my classifier I collected heatmaps for each 
 ### Video Implementation
 
 ####1. Provide a link to your final video output.  Your pipeline should perform reasonably well on the entire project video (somewhat wobbly or unstable bounding boxes are ok as long as you are identifying the vehicles most of the time with minimal false positives.)
-Here's a [link to my video result](./project_video.mp4)
+Here's a [link to my video result](./output_video/project_video.mp4)
 
 
 ####2. Describe how (and identify where in your code) you implemented some kind of filter for false positives and some method for combining overlapping bounding boxes.
@@ -227,5 +228,6 @@ Finally I achieved a smooth moving bounding boxes and no any False positive dete
 
 ####1. Briefly discuss any problems / issues you faced in your implementation of this project.  Where will your pipeline likely fail?  What could you do to make it more robust?
 
-Here I'll talk about the approach I took, what techniques I used, what worked and why, where the pipeline might fail and how I might improve it if I were going to pursue this project further.  
+The biggest issue was that I could not get rid of wobbly windows whatever I do except using Vehicle class. Until I see the recommendation of using it in the discussion forums I spent several hours on the problem. So, I created the class but `scipy.ndimage.measurements.label()` function does not enough to keep the trackscif it was the same as the previous frame. In order to make sure the car is the same car as the detected on previous frame I used `np.intersect1d()` function in order to track the intersection ratio. If the intersection ratio was greater than 0.9 than I assumed that the car is the same car with detected one the previous frame. I also had to use additonal health check mechanisms. For example I tracked the last 10 detection status of the car and if all of the last 10 detection was True then I started to draw bounding boxes otherwise not etc.
 
+I also record [my own video](./output_video/self_video.mp4) in order to check the power of the algorithm but it did not performed well on my video. I think the most obvious reason is the light conditions. The other factor is could be training the classifier with limited data. So, to make it more robust the first improvement must be to adapt the algorithm accordign to the day and night light conditions. And the second improvement is definitely use more data to training.
